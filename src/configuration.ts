@@ -54,4 +54,8 @@ export default class Configuration {
 		Configuration.stockBarConfig().update('stocks', newStocks, 1);
 		return newStocks;
 	}
+
+	static getAlltickToken(): string | undefined {
+		return Configuration.stockBarConfig().get('alltickToken');
+	}
 }

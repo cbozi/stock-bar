@@ -1,5 +1,7 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import Stock from './stock';
+import Configuration from './configuration';
+import { isHKMarket } from './utils';
 
 class SinaStockTransform {
 	/**
@@ -37,7 +39,10 @@ class SinaStockTransform {
 	/**
 	 * 获取现价
 	 */
-	get price(): number {
+	get price(): number | undefined {
+		if (Configuration.getAlltickToken() && isHKMarket(this.code)) {
+			return undefined;
+		}
 		switch (this.code.slice(0, 2)) {
 			case 'sh':
 				return Number(this.params[3] || 0);
@@ -218,3 +223,53 @@ class SinaStockProvider {
 }
 
 export const sinaStockProvider = new SinaStockProvider();
+
+class AllTickStockProvider {
+	static code_regex = /hk0*(\d+)/i;
+	httpService: AxiosInstance;
+	token: string;
+
+	constructor() {
+		this.httpService = axios.create({
+			timeout: 10000,
+			baseURL: 'https://quote.alltick.io',
+		});
+		this.token = Configuration.getAlltickToken();
+	}
+
+	async fetch(codes: string[]) {
+		if (!codes || codes.length === 0) {
+			return [];
+		}
+		try {
+			const codeMap: Record<string, string> = {};
+			const code_transformed = codes.map((code) => {
+				const result = code.replace(AllTickStockProvider.code_regex, '$1.HK');
+				codeMap[result] = code;
+				return result;
+			});
+			const query = {
+				trace: `timestamp_${Date.now()}`,
+				data: {
+					symbol_list: code_transformed.map((item) => ({
+						code: item,
+					})),
+				},
+			};
+			const url = `/quote-stock-b-api/trade-tick?token=${
+				this.token
+			}&query=${encodeURIComponent(JSON.stringify(query))}`;
+			const response = await this.httpService.get(url);
+			const res = response.data.data.tick_list.map((item) => ({
+				code: codeMap[item.code],
+				price: Number(item.price),
+			}));
+			return res;
+		} catch (err: unknown) {
+			console.error(err);
+			return [];
+		}
+	}
+}
+
+export const alltikStockProvider = new AllTickStockProvider();
