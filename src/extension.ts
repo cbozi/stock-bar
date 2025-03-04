@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import logger from './logger';
 import Configuration from './configuration';
-import { sinaStockProvider } from './provider';
+import { alltikStockProvider, sinaStockProvider } from './provider';
 import { render, renderFutures, stopAllRender } from './render';
 import Stock from './stock';
 import FutureHandler from './futures';
 import { clearInterval } from 'timers';
+import { isHKMarket } from './utils';
 
 function loadChoiceStocks() {
 	return Configuration.getStocks().map((v) => {
@@ -23,6 +24,7 @@ function loadChoiceStocks() {
 
 let timer = null;
 let stocks: Stock[];
+let hkStocks: Stock[] = [];
 
 function restart() {
 	const interval = Configuration.getUpdateInterval();
@@ -43,12 +45,26 @@ async function ticker() {
 	try {
 		// 从云端获取最新状态
 		logger.debug('call fetchData');
-		const [data] = await Promise.all([
+		const alltickToken = Configuration.getAlltickToken();
+		if (alltickToken) {
+			hkStocks = stocks.filter((s) => isHKMarket(s.code));
+		}
+		const [data, alltickData] = await Promise.all([
 			sinaStockProvider.fetch(stocks.map((v) => v.code)),
+			alltickToken
+				? alltikStockProvider.fetch(hkStocks.map((v) => v.code))
+				: Promise.resolve([]),
 			futureHandler.updateData(),
 		]);
 		// 更新本地的数据
 		for (const origin of data) {
+			const stock = stocks.find((v) => v.code.toLowerCase() === origin.code);
+			if (!stock) {
+				continue;
+			}
+			stock.update(origin);
+		}
+		for (const origin of alltickData) {
 			const stock = stocks.find((v) => v.code.toLowerCase() === origin.code);
 			if (!stock) {
 				continue;

@@ -25,15 +25,19 @@ export const calcFixedNumber = (item: Stock) => {
 		String(item.yestclose).indexOf('.') === -1
 			? 0
 			: String(item.yestclose).length - String(item.yestclose).indexOf('.') - 1;
-	const updown =
-		String(item.updown).indexOf('.') === -1
-			? 0
-			: String(item.updown).length - String(item.updown).indexOf('.') - 1;
-	let max = Math.max(high, low, open, yest, updown);
+	// const updown =
+	// 	String(item.updown).indexOf('.') === -1
+	// 		? 0
+	// 		: String(item.updown).length - String(item.updown).indexOf('.') - 1;
+	let max = Math.max(high, low, open, yest);
 
 	if (max === 0) {
 		max = 2;
 	}
 
 	return max;
+};
+
+export const isHKMarket = (code: string) => {
+	return code.toLowerCase().startsWith('hk');
 };

@@ -27,13 +27,15 @@ export default class Stock {
 		this.hold_number = hold_number ?? 0;
 	}
 	update(origin: Stock) {
-		this.name = origin.name;
-		this.price = origin.price;
-		this.high = origin.high;
-		this.low = origin.low;
-		this.updown = origin.updown;
-		this.percent = origin.percent;
-		this.open = origin.open;
-		this.yestclose = origin.yestclose;
+		this.name = origin.name ?? this.name;
+		this.price = origin.price ?? this.price;
+		this.high = origin.high ?? this.high;
+		this.low = origin.low ?? this.low;
+		this.updown = origin.price ? origin.price - this.yestclose : this.percent;
+		this.percent = origin.price
+			? Math.round((origin.price / this.yestclose - 1) * 10000) / 10000
+			: this.percent;
+		this.open = origin.open ?? this.open;
+		this.yestclose = origin.yestclose ?? this.yestclose;
 	}
 }
